@@ -1,5 +1,6 @@
 'use strict';
 
+const cheerio = require('cheerio');
 const createError = require('http-errors');
 const express = require('express');
 const {EventEmitter} = require('events');
@@ -9,6 +10,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const io = require('socket.io')();
+const util = require('./lib/utilities');
 
 const indexRouter = require('./routes/index');
 
@@ -26,34 +28,43 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 
-var old_file = fs.readFileSync('var/file.txt', {encoding:"utf8"});
+var old_headlines = JSON.parse(fs.readFileSync('var/abc.old.json', {encoding:"utf8"}));
+
 var fileEvent = new EventEmitter();
 
-fs.watch('var/file.txt', function(eventType, filename) {
+fs.watch('var/abc.html', function(eventType, filename) {
   fs.promises.readFile(`var/${filename}`, {encoding:"utf8"})
     .then(function(data) {
-    // only flash this message if the file's content has changed
-    var new_file = data;
-    if (new_file !== old_file) {
-      console.log(`The content of ${filename} has changed: it was a ${eventType} event.`)
-      var file_changes = diff.diffLines(old_file,new_file);
-      /*
-      console.log(`Here are the changes (promise!):`);
-      */
-      var all_changes = file_changes.map((change, i) => {
-        if (change.added) {
-          return `<li class="ins">${change.value}</li>`;
-        }
-        if (change.removed) {
-          return `<li class="del">${change.value}</li>`;
-        }
+      var new_file = data;
+      // Use Cheerio to pull headlines of interest
+      let qs = cheerio.load(new_file);
+      let headlines = [];
+      qs('.headlines-ul li a').each(function(i,elem){
+        var data = qs(elem);
+        var headline = {};
+        headline.text = data.text().trim();
+        headline.url = data.attr('href').trim();
+        headlines.push(headline);
       });
-      fileEvent.emit('changed file', all_changes.join('\n'));
-    }
-    old_file = new_file
+
+      // Compare the old headlines with the new; return the new ones
+      let new_headlines = util.findUniqueObjects(headlines,old_headlines,'url');
+
+      // Only proceed if there are new headlines to work with
+      if (new_headlines.length > 0) {
+        // Process headlines into an HTML payload
+        let html_headlines = new_headlines.map(function(hl) {
+          return `<li><a href="${hl.url}">${hl.text}</a></li>`;
+        });
+
+        fileEvent.emit('new headlines', html_headlines);
+        old_headlines = headlines;
+        // Write latest headlines to files
+        fs.promises.writeFile('var/abc.latest.json', JSON.stringify(new_headlines), {encoding:"utf8"});
+        fs.promises.writeFile('var/abc.old.json', JSON.stringify(headlines), {encoding:"utf8"});
+      }
+    });
   });
-  }
-);
 
 // send a message on successful socket connection
 io.on('connection', function(socket){
@@ -61,8 +72,8 @@ io.on('connection', function(socket){
   socket.on('message received', function(data) {
     console.log('Client is saying a message was received: ' + data);
   });
-  fileEvent.on('changed file', function(data) {
-    socket.emit('diffed changes', data);
+  fileEvent.on('new headlines', function(data) {
+    socket.emit('headlines', data);
   });
 });
 
