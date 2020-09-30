@@ -29,10 +29,6 @@ app.use('/', indexRouter);
 var old_file = fs.readFileSync('var/file.txt', {encoding:"utf8"});
 var fileEvent = new EventEmitter();
 
-fileEvent.on('changed file', function(data){
-  console.log('The file was changed and fired an event. This data was received:\n' + data);
-});
-
 fs.watch('var/file.txt', function(eventType, filename) {
   fs.promises.readFile(`var/${filename}`, {encoding:"utf8"})
     .then(function(data) {
