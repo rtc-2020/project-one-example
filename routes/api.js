@@ -1,17 +1,14 @@
 'use strict';
 
 const express = require('express');
-const fs = require('fs');
 const router = express.Router();
 
+const apiController = require('../controllers/api');
+
 /* GET latest headlines */
-router.get('/latest', function(req, res, next) {
-  res.sendFile('abc.latest.json', {root: './var/'});
-});
+router.get('/latest', apiController.latest);
 
 /* GET all headlines */
-router.get('/all', function(req, res, next) {
-  res.sendFile('abc.old.json', {root: './var/'});
-});
+router.get('/all', apiController.all);
 
 module.exports = router;
