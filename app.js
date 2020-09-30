@@ -13,6 +13,7 @@ const io = require('socket.io')();
 const util = require('./lib/utilities');
 
 const indexRouter = require('./routes/index');
+const apiRouter = require('./routes/api');
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
+app.use('/api', apiRouter);
 
 var old_headlines = JSON.parse(fs.readFileSync('var/abc.old.json', {encoding:"utf8"}));
 
