@@ -1,11 +1,9 @@
 'use strict';
 
-const cheerio = require('cheerio');
 const createError = require('http-errors');
 const express = require('express');
 const {EventEmitter} = require('events');
 const fs = require('fs');
-const diff = require('diff');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
