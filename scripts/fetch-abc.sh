@@ -4,7 +4,8 @@
 # */5 * * * * /path/to/fetch-abc.sh
 
 # See http://zsh.sourceforge.net/Doc/Release/Expansion.html#Modifiers
-cd "$0:a:h:a"/var
+cd "$0:a:h:h/var"
+touch abc.html
 cp abc.html abc.old.html
 curl -o abc.html https://abcnews.go.com/
 exit
